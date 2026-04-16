@@ -94,7 +94,7 @@ export async function GET(request: Request) {
         // IMPORTANT: While on Resend's free tier, you MUST use 'onboarding@resend.dev' as the from address,
         // and you can ONLY send emails to the email address you used to sign up for Resend.
         await resend.emails.send({
-          from: "FirstStep <onboarding@resend.dev>",
+          from: "FirstStep <team@firststep.services>",
           to: user.email,
           subject: `Your ${user.frequency} ${user.industry} Drop is here! 🎯`,
           html: emailHTML,
