@@ -9,13 +9,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
-
-
 export async function GET(request: Request) {
-    // Protect the route from public access
-  const authHeader = request.headers.get('authorization');
+  // Protect the route from public access
+  const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
+    return new Response("Unauthorized", { status: 401 });
   }
   try {
     console.log("Starting Notification Engine...");
@@ -86,7 +84,13 @@ export async function GET(request: Request) {
               <p style="font-size: 18px; color: #333; font-weight: bold;">Here are your fresh <b>${user.industry}</b> ${user.role.toLowerCase()}s!</p>
               <hr style="border: 2px solid black; margin: 30px 0;" />
               ${jobListHTML}
-              <p style="margin-top: 30px; font-size: 14px; color: #777;">Good luck on the grind! - The FirstStep Team</p>
+              <div style="margin-top: 40px; text-align: center;">
+  <p style="font-size: 14px; color: #555; font-weight: bold; margin-bottom: 8px;">Good luck on the grind! - The FirstStep Team</p>
+  <p style="font-size: 12px; color: #999; margin: 0;">
+    No longer looking for roles? 
+    <a href="https://firststep.services/api/unsubscribe?email=${user.email}" style="color: #999; text-decoration: underline;">Unsubscribe instantly</a>.
+  </p>
+</div>
             </div>
           </div>
         `;
