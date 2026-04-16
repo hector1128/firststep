@@ -39,33 +39,38 @@ export async function GET(request: Request) {
     // 3. The Matching Loop
     for (const user of users || []) {
       const lastEmailed = new Date(user.last_emailed_at);
-      const hoursSinceLastEmail = (now.getTime() - lastEmailed.getTime()) / (1000 * 60 * 60);
+      const hoursSinceLastEmail =
+        (now.getTime() - lastEmailed.getTime()) / (1000 * 60 * 60);
 
       // Check if it's time to email them (23 hours for Daily, 167 hours for Weekly)
-      const isDueForEmail = 
+      const isDueForEmail =
         (user.frequency === "Daily" && hoursSinceLastEmail >= 23) ||
         (user.frequency === "Weekly" && hoursSinceLastEmail >= 167);
 
       if (!isDueForEmail) continue; // Skip to the next user if it's not time yet
 
       // Find jobs that match their industry/role AND were added after their last email
-      const matchedJobs = recentJobs?.filter(job => 
-        job.industry === user.industry &&
-        job.role === user.role &&
-        new Date(job.created_at) > lastEmailed
+      const matchedJobs = recentJobs?.filter(
+        (job) =>
+          job.industry === user.industry &&
+          job.role === user.role &&
+          new Date(job.created_at) > lastEmailed,
       );
 
       // Only send an email if there are actually new jobs for them!
       if (matchedJobs && matchedJobs.length > 0) {
-        
         // Generate the chunky, UCF-themed HTML Email
-        const jobListHTML = matchedJobs.map(job => `
+        const jobListHTML = matchedJobs
+          .map(
+            (job) => `
           <div style="text-align: left; margin-bottom: 20px; padding: 20px; border: 4px solid black; border-radius: 12px; background-color: #ffffff; box-shadow: 4px 4px 0px 0px #000000;">
             <h2 style="margin: 0 0 8px 0; font-size: 22px; color: black;">${job.title}</h2>
-            <p style="margin: 0 0 16px 0; font-size: 16px; color: #555;"><b>${job.company}</b> • ${job.location || 'United States'}</p>
+            <p style="margin: 0 0 16px 0; font-size: 16px; color: #555;"><b>${job.company}</b> • ${job.location || "United States"}</p>
             <a href="${job.url}" style="background-color: #FFC904; color: black; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; border: 3px solid black; display: inline-block;">View Role</a>
           </div>
-        `).join('');
+        `,
+          )
+          .join("");
 
         const emailHTML = `
           <div style="font-family: Arial, sans-serif; background-color: #FFC904; padding: 40px 20px; text-align: center;">
@@ -79,11 +84,11 @@ export async function GET(request: Request) {
           </div>
         `;
 
-        // IMPORTANT: While on Resend's free tier, you MUST use 'onboarding@resend.dev' as the from address, 
+        // IMPORTANT: While on Resend's free tier, you MUST use 'onboarding@resend.dev' as the from address,
         // and you can ONLY send emails to the email address you used to sign up for Resend.
         await resend.emails.send({
           from: "FirstStep <onboarding@resend.dev>",
-          to: user.email, 
+          to: user.email,
           subject: `Your ${user.frequency} ${user.industry} Drop is here! 🎯`,
           html: emailHTML,
         });
@@ -100,17 +105,21 @@ export async function GET(request: Request) {
 
     // 4. Update the database timestamps for everyone we emailed
     if (updatedUsers.length > 0) {
-      const { error: updateError } = await supabase.from("users").upsert(updatedUsers);
+      const { error: updateError } = await supabase
+        .from("users")
+        .upsert(updatedUsers);
       if (updateError) throw new Error(updateError.message);
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: `Engine ran successfully. Sent ${emailsSentCount} emails.` 
+    return NextResponse.json({
+      success: true,
+      message: `Engine ran successfully. Sent ${emailsSentCount} emails.`,
     });
-
   } catch (error) {
     console.error("Notify Engine Error:", error);
-    return NextResponse.json({ success: false, error: "Failed to run notification engine" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to run notification engine" },
+      { status: 500 },
+    );
   }
 }

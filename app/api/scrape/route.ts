@@ -12,58 +12,67 @@ export async function GET(request: Request) {
   try {
     console.log("Starting Apify Scrape...");
     const queries = [
-  "Software Engineer Internship",
-  "Data Science Internship",
-  "Marketing Internship",
-  "Finance Internship",
-  "Graphic Design Internship",
-  "Human Resources Internship",
-  "Public Policy Internship"
-];
+      "Software Engineer Internship",
+      "Data Science Internship",
+      "Marketing Internship",
+      "Finance Internship",
+      "Graphic Design Internship",
+      "Human Resources Internship",
+      "Public Policy Internship",
+    ];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let allFormattedJobs: any[] = [];
 
     // Loop through each industry to keep the searches clean
     for (const currentQuery of queries) {
       const apifyUrl = `https://api.apify.com/v2/acts/johnvc~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`;
-      
+
       const apifyResponse = await fetch(apifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: currentQuery, 
+          query: currentQuery,
           location: "United States",
-          maxPagesPerQuery: 1, 
+          maxPagesPerQuery: 1,
         }),
       });
 
       if (!apifyResponse.ok) {
-         const errorDetails = await apifyResponse.text();
-         console.error(`Apify Error for ${currentQuery}:`, errorDetails);
-         continue; // If one query fails, skip it and try the next one!
+        const errorDetails = await apifyResponse.text();
+        console.error(`Apify Error for ${currentQuery}:`, errorDetails);
+        continue; // If one query fails, skip it and try the next one!
       }
 
       const scrapedJobs = await apifyResponse.json();
-      
+
       // Format the data and dig out the direct ATS link
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedJobs = scrapedJobs.map((job: any) => {
-        let industry = "Public Sector & Humanities"; 
-        if (job.title.toLowerCase().includes("software") || job.title.toLowerCase().includes("tech")) {
+        let industry = "Public Sector & Humanities";
+        if (
+          job.title.toLowerCase().includes("software") ||
+          job.title.toLowerCase().includes("tech")
+        ) {
           industry = "Technology & Engineering";
-        } else if (job.title.toLowerCase().includes("marketing") || job.title.toLowerCase().includes("business")) {
+        } else if (
+          job.title.toLowerCase().includes("marketing") ||
+          job.title.toLowerCase().includes("business")
+        ) {
           industry = "Business & Operations";
         }
 
         // Dig into the apply_options array for the direct link, fallback to share_link if it fails
-        const directLink = (job.apply_options && job.apply_options.length > 0) 
-            ? job.apply_options[0].link 
-            : (job.job_link || job.share_link);
+        const directLink =
+          job.apply_options && job.apply_options.length > 0
+            ? job.apply_options[0].link
+            : job.job_link || job.share_link;
 
         return {
           title: job.title,
           company: job.company_name,
           location: job.location,
-          url: directLink, 
-          role: "Internship", 
+          url: directLink,
+          role: "Internship",
           industry: industry,
         };
       });
@@ -78,13 +87,15 @@ export async function GET(request: Request) {
 
     if (error) throw new Error(error.message);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: `Successfully processed ${allFormattedJobs.length} jobs.` 
+    return NextResponse.json({
+      success: true,
+      message: `Successfully processed ${allFormattedJobs.length} jobs.`,
     });
-
   } catch (error) {
     console.error("Scraping Error:", error);
-    return NextResponse.json({ success: false, error: "An unexpected error occurred" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "An unexpected error occurred" },
+      { status: 500 },
+    );
   }
 }
