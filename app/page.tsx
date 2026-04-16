@@ -57,6 +57,16 @@ export default function FirstStepOnboarding() {
       return;
     }
 
+    fetch("/api/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: formData.email,
+        firstName: formData.firstName,
+        frequency: formData.frequency,
+      }),
+    }).catch((err) => console.error("Welcome email failed:", err));
+
     // If Supabase successfully saved the data, trigger the celebration screen!
     nextStep();
   };
