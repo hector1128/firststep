@@ -9,6 +9,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN!;
 
 export async function GET(request: Request) {
+  // Protect the route from public access
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
   try {
     console.log("Starting Apify Scrape...");
     const queries = [

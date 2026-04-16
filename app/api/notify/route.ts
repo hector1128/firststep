@@ -9,7 +9,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
+
+
 export async function GET(request: Request) {
+    // Protect the route from public access
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response('Unauthorized', { status: 401 });
+  }
   try {
     console.log("Starting Notification Engine...");
     const now = new Date();
