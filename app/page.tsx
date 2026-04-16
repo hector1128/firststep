@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { submitUserRegistration } from "./actions";
 
 export default function FirstStepOnboarding() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     role: "",
     frequency: "",
+    industry: "", // NEW: Added industry to state
     firstName: "",
     email: "",
   });
@@ -31,10 +33,32 @@ export default function FirstStepOnboarding() {
     nextStep();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // NEW: Handler for industry selection
+  const handleIndustrySelection = (industry: string) => {
+    setFormData({ ...formData, industry });
     nextStep();
-    // Insert your actual submission logic here (e.g., API call to your backend)
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Call our secure Supabase Server Action
+    const result = await submitUserRegistration({
+      firstName: formData.firstName,
+      email: formData.email,
+      role: formData.role,
+      frequency: formData.frequency,
+      industry: formData.industry, // NEW: Include in database submission
+    });
+
+    if (!result.success) {
+      console.error("Failed to save user:", result.error);
+      alert(result.error); // Tells the user if the email is already in the Supabase DB!
+      return;
+    }
+
+    // If Supabase successfully saved the data, trigger the celebration screen!
+    nextStep();
   };
 
   return (
@@ -42,8 +66,6 @@ export default function FirstStepOnboarding() {
     <div className="min-h-screen bg-[#FFC904] relative overflow-hidden flex items-center justify-center p-4 selection:bg-black selection:text-[#FFC904]">
       
       {/* --- Floating Decorative Elements (The "Lesa" Vibe) --- */}
-    
-   {/* --- Floating Decorative Elements (The "Lesa" Vibe) --- */}
     
     {/* 1. Top Left - CIRCLE */}
     <div className="absolute top-10 left-10 lg:left-32 w-16 h-16 bg-white border-4 border-black rounded-full shadow-[6px_6px_0px_0px_#000000] animate-bounce" style={{ animationDuration: '4s' }} />
@@ -101,8 +123,8 @@ export default function FirstStepOnboarding() {
       {/* Main Chunky Card */}
       <div className="w-full max-w-xl bg-white border-8 border-black rounded-[2rem] shadow-[16px_16px_0px_0px_#000000] p-8 md:p-12 relative z-10">
         
-        {/* Header - Only shows during the questions */}
-        {step < 5 && (
+        {/* Header - Only shows during the questions (Now hides on step 6) */}
+        {step < 6 && (
           <div className="mb-8 text-center">
             <h1 className="text-4xl md:text-5xl font-extrabold text-black tracking-tight mb-4">
               Welcome to FirstStep
@@ -165,8 +187,35 @@ export default function FirstStepOnboarding() {
             </div>
           )}
 
-          {/* STEP 3: First Name */}
+          {/* STEP 3: Industry (NEW) */}
           {step === 3 && (
+            <div className="flex flex-col gap-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-black text-center mb-4">
+                What industry are you targeting?
+              </h2>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  "Technology & Engineering",
+                  "Business & Operations",
+                  "Design & Media",
+                  "Sciences & Healthcare",
+                  "Public Sector & Humanities"
+                ].map((ind) => (
+                  <button
+                    key={ind}
+                    onClick={() => handleIndustrySelection(ind)}
+                    className="w-full py-4 px-4 text-xl md:text-2xl font-bold text-black bg-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_#FFC904] active:translate-y-1 active:shadow-[0px_0px_0px_0px_#FFC904] transition-all text-left flex justify-between items-center"
+                  >
+                    <span>{ind}</span>
+                    <span className="text-[#FFC904] text-2xl">➔</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: First Name (Shifted from 3) */}
+          {step === 4 && (
             <div className="flex flex-col gap-6">
               <h2 className="text-2xl md:text-3xl font-bold text-black text-center mb-4">
                 What is your first name?
@@ -190,8 +239,8 @@ export default function FirstStepOnboarding() {
             </div>
           )}
 
-          {/* STEP 4: Email */}
-          {step === 4 && (
+          {/* STEP 5: Email (Shifted from 4) */}
+          {step === 5 && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <h2 className="text-2xl md:text-3xl font-bold text-black text-center mb-4">
                 What is your email?
@@ -215,8 +264,8 @@ export default function FirstStepOnboarding() {
             </form>
           )}
 
-          {/* STEP 5: Success State */}
-          {step === 5 && (
+          {/* STEP 6: Success State (Shifted from 5) */}
+          {step === 6 && (
             <div className="flex flex-col items-center justify-center gap-6 py-8 text-center animate-in zoom-in duration-500">
               <div className="w-24 h-24 mb-4 bg-[#FFC904] border-4 border-black rounded-full flex items-center justify-center shadow-[6px_6px_0px_0px_#000000] animate-bounce">
                 <span className="text-5xl">🎉</span>
@@ -225,7 +274,7 @@ export default function FirstStepOnboarding() {
                 Thank you, {formData.firstName}!
               </h2>
               <p className="text-xl font-bold text-gray-700">
-                You're officially signed up for {formData.frequency.toLowerCase()} updates for {formData.role.toLowerCase()} roles.
+                You're officially signed up for {formData.frequency.toLowerCase()} updates for {formData.industry} {formData.role.toLowerCase()} roles.
               </p>
               <div className="mt-6 px-6 py-4 bg-gray-100 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_#000000]">
                 <p className="text-lg font-bold text-black">
@@ -236,10 +285,10 @@ export default function FirstStepOnboarding() {
           )}
         </div>
 
-        {/* Progress Bar (Bottom) */}
-        {step < 5 && (
+        {/* Progress Bar (Bottom) - Now maps up to 5 steps */}
+        {step < 6 && (
           <div className="mt-12 flex gap-2 justify-center">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
                 className={`h-3 rounded-full border-2 border-black transition-all duration-300 ${
