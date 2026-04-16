@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     "new grad roles",
     "tech internships",
   ],
+  // NEW: Added the favicon here!
+  icons: {
+    icon: "/sword.png",
+  },
   openGraph: {
     title: "FirstStep | UCF Internship Alerts",
     description:
