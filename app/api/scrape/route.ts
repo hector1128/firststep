@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           position: currentQuery, // We pass your search query here!
-          country: "US",
+          country: "us",
           limit: 30, // Lower limit per query saves Apify credits and keeps data fresh
           sort: "date", // Force Indeed to give us the newest jobs
         }),
