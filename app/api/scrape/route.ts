@@ -14,8 +14,11 @@ export async function GET(request: Request) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
   }
+
   try {
-    console.log("Starting Apify Scrape...");
+    console.log("Starting Apify Scrape with Indeed Actor...");
+
+    // We kept your same queries, but notice how they include the word "Internship"
     const queries = [
       "Software Engineer Internship",
       "Data Science Internship",
@@ -25,64 +28,77 @@ export async function GET(request: Request) {
       "Human Resources Internship",
       "Public Policy Internship",
     ];
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let allFormattedJobs: any[] = [];
 
-    // Loop through each industry to keep the searches clean
     for (const currentQuery of queries) {
-      const apifyUrl = `https://api.apify.com/v2/acts/johnvc~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`;
+      // 1. CHANGED THE ACTOR URL: Pointing to "valig/indeed-jobs-scraper"
+      const apifyUrl = `https://api.apify.com/v2/acts/valig~indeed-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`;
 
       const apifyResponse = await fetch(apifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: currentQuery,
-          location: "United States",
-          maxPagesPerQuery: 1,
+          position: currentQuery, // We pass your search query here!
+          country: "US",
+          limit: 30, // Lower limit per query saves Apify credits and keeps data fresh
+          sort: "date", // Force Indeed to give us the newest jobs
         }),
       });
 
       if (!apifyResponse.ok) {
         const errorDetails = await apifyResponse.text();
         console.error(`Apify Error for ${currentQuery}:`, errorDetails);
-        continue; // If one query fails, skip it and try the next one!
+        continue;
       }
 
       const scrapedJobs = await apifyResponse.json();
 
-      // Format the data and dig out the direct ATS link
+      // 2. UPDATED THE MAPPING: Indeed uses different property names than Google Search!
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedJobs = scrapedJobs.map((job: any) => {
         let industry = "Public Sector & Humanities";
+
+        // Slightly improved industry matching logic
+        const lowercaseTitle = job.positionName?.toLowerCase() || "";
         if (
-          job.title.toLowerCase().includes("software") ||
-          job.title.toLowerCase().includes("tech")
+          lowercaseTitle.includes("software") ||
+          lowercaseTitle.includes("tech") ||
+          lowercaseTitle.includes("data")
         ) {
           industry = "Technology & Engineering";
         } else if (
-          job.title.toLowerCase().includes("marketing") ||
-          job.title.toLowerCase().includes("business")
+          lowercaseTitle.includes("marketing") ||
+          lowercaseTitle.includes("finance") ||
+          lowercaseTitle.includes("human resources")
         ) {
           industry = "Business & Operations";
+        } else if (lowercaseTitle.includes("design")) {
+          industry = "Design & Media";
+        } else if (
+          lowercaseTitle.includes("health") ||
+          lowercaseTitle.includes("science")
+        ) {
+          industry = "Sciences & Healthcare";
         }
 
-        // Dig into the apply_options array for the direct link, fallback to share_link if it fails
-        const directLink =
-          job.apply_options && job.apply_options.length > 0
-            ? job.apply_options[0].link
-            : job.job_link || job.share_link;
-
         return {
-          title: job.title,
-          company: job.company_name,
-          location: job.location,
-          url: directLink,
-          role: "Internship",
+          title: job.positionName, // Indeed calls it 'positionName'
+          company: job.company, // Indeed calls it 'company'
+          location: job.location, // Indeed calls it 'location'
+          url: job.url, // Indeed calls it 'url'
+          role: "Internship", // Hardcoded since we only searched for internships
           industry: industry,
         };
       });
 
-      allFormattedJobs = [...allFormattedJobs, ...formattedJobs];
+      // 3. FILTER OUT JUNK: Only add jobs that actually have a title and a link
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const validJobs = formattedJobs.filter(
+        (job: any) => job.title && job.url,
+      );
+      allFormattedJobs = [...allFormattedJobs, ...validJobs];
     }
 
     // Upsert everything into Supabase
@@ -94,7 +110,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${allFormattedJobs.length} jobs.`,
+      message: `Successfully processed ${allFormattedJobs.length} Indeed jobs.`,
     });
   } catch (error) {
     console.error("Scraping Error:", error);
